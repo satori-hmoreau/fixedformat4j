@@ -22,6 +22,7 @@ import com.ancientprogramming.fixedformat4j.format.FormatInstructions;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,6 +50,7 @@ public class ByTypeFormatter implements FixedFormatter<Object> {
     KNOWN_FORMATTERS.put(long.class, LongFormatter.class);
     KNOWN_FORMATTERS.put(Long.class, LongFormatter.class);
     KNOWN_FORMATTERS.put(Date.class, DateFormatter.class);
+    KNOWN_FORMATTERS.put(LocalDate.class, LocalDateFormatter.class);
     KNOWN_FORMATTERS.put(char.class, CharacterFormatter.class);
     KNOWN_FORMATTERS.put(Character.class, CharacterFormatter.class);
     KNOWN_FORMATTERS.put(boolean.class, BooleanFormatter.class);
