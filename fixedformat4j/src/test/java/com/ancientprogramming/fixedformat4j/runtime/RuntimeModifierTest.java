@@ -7,10 +7,14 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import com.ancientprogramming.fixedformat4j.annotation.Align;
 import com.ancientprogramming.fixedformat4j.annotation.Field;
 import com.ancientprogramming.fixedformat4j.annotation.FixedFormatPattern;
 import com.ancientprogramming.fixedformat4j.annotation.Record;
+import com.ancientprogramming.fixedformat4j.configuration.FixedFormatConfigurer;
 import com.ancientprogramming.fixedformat4j.format.FixedFormatManager;
 import com.ancientprogramming.fixedformat4j.format.impl.FixedFormatManagerImpl;
 
@@ -18,13 +22,14 @@ import junit.framework.TestCase;
 
 public class RuntimeModifierTest extends TestCase {
 
+  private Log logger = LogFactory.getLog(RuntimeModifierTest.class);
   @Record
   public class BasicRecord {
     private String stringData;
     private Integer integerData;
     private LocalDate dateData;
     
-    @Field(offset=1, length=20)
+    @Field(offset=1, length=20, align=Align.LEFT)
     public String getStringData() {
       return this.stringData;
     }
@@ -81,7 +86,7 @@ public class RuntimeModifierTest extends TestCase {
       assertTrue("string data too long", record.getStringData().length() <= 10);
       changeAnnotationValue(fAnnotation, "length", (Integer) 20);
     } catch (NoSuchMethodException e) {
-      fail("Coldn't find getStringData method");
+      fail("Couldn't find getStringData method");
     }
     
   }
@@ -107,6 +112,54 @@ public class RuntimeModifierTest extends TestCase {
       BasicRecord record = ffm.load(BasicRecord.class, FRECORD);
       assertTrue("Did not read overlapped integer field", record.getIntegerData() == 12345);
       assertTrue("Did not read overlapped string field", record.getStringData().equals("12345678901234567890"));
+    } catch (Exception e) {
+      fail("Caught unexpected exception " + e.getMessage());
+    }
+  }
+  
+  public void testFixedFormatConfiguratorAndReset() {
+    try {
+      FixedFormatConfigurer ffc = 
+        FixedFormatConfigurer.forField("integerData")
+          .inClass(BasicRecord.class)
+          .offset(25)
+          .length(10)
+          .alignment(Align.LEFT)
+          .paddingChar('#')
+          .apply();
+      Field fAnnotation = BasicRecord.class.getMethod("getIntegerData").getAnnotation(Field.class);
+      assertTrue("Offset isn't 25", fAnnotation.offset() == 25);
+      assertTrue("Length isn't 10", fAnnotation.length() == 10);
+      assertTrue("Alignment isn't LEFT", fAnnotation.align().equals(Align.LEFT));
+      assertTrue("Padding character isn't '#'", fAnnotation.paddingChar() == '#');
+      ffc.reset();
+      assertFalse("Offset is still 25", fAnnotation.offset() == 25);
+      assertFalse("Length is still 10", fAnnotation.length() == 10);
+      assertFalse("Alignment is still LEFT", fAnnotation.align().equals(Align.LEFT));
+      assertFalse("Padding character is still '#'", fAnnotation.paddingChar() == '#');
+    } catch (Exception e) {
+      fail("Caught unexpected exception " + e.getMessage());
+    }
+  }
+  
+  public void testFixedFormatConfiguratorErrorNoMethod() {
+    try {
+      FixedFormatConfigurer.forField("notAField").inClass(BasicRecord.class);
+    } catch (NoSuchMethodException e) {
+     logger.info("Got expected exception"); 
+    } catch (Exception e) {
+      fail("Caught unexpected exception " + e.getMessage());
+    }
+  }
+  
+  public void testFixedFormatConfiguratorErrorNoClass() {
+    try {
+      FixedFormatConfigurer.forField("stringData")
+        .offset(10)
+        .length(5)
+        .apply();
+    } catch (IllegalStateException e) {
+      logger.info("Caught expected exception");
     } catch (Exception e) {
       fail("Caught unexpected exception " + e.getMessage());
     }
@@ -142,4 +195,6 @@ public class RuntimeModifierTest extends TestCase {
       memberValues.put(key,newValue);
       return oldValue;
   }
+  
+  
 }
