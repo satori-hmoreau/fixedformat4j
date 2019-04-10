@@ -15,15 +15,20 @@ import com.ancientprogramming.fixedformat4j.annotation.Field;
 import com.ancientprogramming.fixedformat4j.annotation.FixedFormatPattern;
 
 /**
- * A FixedFormatConfigurator defines the modifications to make to the fixed format annotations for a single property of a class.
+ * A FixedFormatFieldConfigurer defines the modifications to make to the fixed format annotations for a single property of a class.
  * The property name (fieldName) is required and the targetClass is also required.
  * 
- * Note that the use of this class is not thread safe because it manipulates annotations on a class
+ * Note that the use of this class is <b>not thread safe</b> because it manipulates annotations on a class
  * and not an instance of a class.  So you can only manipulate the class in series.
+ * 
+ * After changing the values of annotations with this class and using the modified 
+ * annotations, use <i>reset()</i> to put the values back to what
+ * they were before you started meddling with them.
+ * 
  * @author Harry Moreau
  *
  */
-public class FixedFormatConfigurer {
+public class FixedFormatFieldConfigurer {
 
   private Log logger = LogFactory.getLog(this.getClass());
   
@@ -38,17 +43,17 @@ public class FixedFormatConfigurer {
   
   /**
    * @param fieldName
-   * @return a new {@link FixedFormatConfigurer} for the given fieldName.
+   * @return a new {@link FixedFormatFieldConfigurer} for the given fieldName.
    */
-  public static FixedFormatConfigurer forField(String fieldName) {
-    return new FixedFormatConfigurer(fieldName);
+  public static FixedFormatFieldConfigurer forField(String fieldName) {
+    return new FixedFormatFieldConfigurer(fieldName);
   }
   
-  public static FixedFormatConfigurer forFieldWith(String fieldName, Map<String,String> properties) {
-    return new FixedFormatConfigurer(fieldName).mapProperties(properties);
+  public static FixedFormatFieldConfigurer forFieldWith(String fieldName, Map<String,String> properties) {
+    return new FixedFormatFieldConfigurer(fieldName).mapProperties(properties);
   }
   
-  private FixedFormatConfigurer mapProperties(Map<String, String> properties) {
+  private FixedFormatFieldConfigurer mapProperties(Map<String, String> properties) {
     properties.forEach((key, value) -> {
       switch(key.toLowerCase()) {
       case "offset":
@@ -57,21 +62,27 @@ public class FixedFormatConfigurer {
       case "length":
         this.length(Integer.parseInt(value));
         break;
+      case "align":
       case "alignment":
-        String align = value.toLowerCase();
-        if (align.equals("left")) {
+        String alignValue = value.toLowerCase();
+        if (alignValue.equals("left")) {
           this.alignment(Align.LEFT);
-        } else if (align.equals("right")) {
+        } else if (alignValue.equals("right")) {
           this.alignment(Align.RIGHT);
         } else {
-          logger.warn("Unknown alignment value for " + fieldName + ": " + alignment);
+          logger.warn("Unknown alignment value for " + fieldName + ": " + alignValue);
         }
         break;
       case "pattern":
         this.pattern(value);
         break;
+      case "padding":
       case "paddingchar":
-        this.paddingChar(value.charAt(0));
+        if (value.equalsIgnoreCase("space")) {
+          this.paddingChar(' ');
+        } else {
+          this.paddingChar(value.charAt(0));
+        }
         break;
       default:
         logger.warn("Unknown property " + key + " for field " + fieldName);
@@ -87,7 +98,7 @@ public class FixedFormatConfigurer {
    * @param targetClass
    * @return the receiver object (this).
    */
-  public FixedFormatConfigurer inClass(Class<?> targetClass) throws NoSuchMethodException {
+  public FixedFormatFieldConfigurer inClass(Class<?> targetClass) throws NoSuchMethodException {
     this.setTargetClass(targetClass);
     String methodName = GET_PREFIX + getFieldName().substring(0,1).toUpperCase() + getFieldName().substring(1);
     try {
@@ -104,7 +115,7 @@ public class FixedFormatConfigurer {
    * @param offset
    * @return the receiver object (this).
    */
-  public FixedFormatConfigurer offset(Integer offset) {
+  public FixedFormatFieldConfigurer offset(Integer offset) {
     this.setOffset(offset);
     return this;
   }
@@ -114,7 +125,7 @@ public class FixedFormatConfigurer {
    * @param alignment
    * @return the receiver object (this).
    */
-  public FixedFormatConfigurer alignment(Align alignment) {
+  public FixedFormatFieldConfigurer alignment(Align alignment) {
     this.setAlignment(alignment);
     return this;
   }
@@ -124,7 +135,7 @@ public class FixedFormatConfigurer {
    * @param length
    * @return the receiver object (this).
    */
-  public FixedFormatConfigurer length(Integer length) {
+  public FixedFormatFieldConfigurer length(Integer length) {
     this.setLength(length);
     return this;
   }
@@ -134,7 +145,7 @@ public class FixedFormatConfigurer {
    * @param character
    * @return the receiver object (this).
    */
-  public FixedFormatConfigurer paddingChar(Character character) {
+  public FixedFormatFieldConfigurer paddingChar(Character character) {
     this.setPaddingChar(character);
     return this;
   }
@@ -144,12 +155,12 @@ public class FixedFormatConfigurer {
    * @param pattern
    * @return the receiver object (this).
    */
-  public FixedFormatConfigurer pattern(String pattern) {
+  public FixedFormatFieldConfigurer pattern(String pattern) {
     this.setPattern(pattern);
     return this;
   }
   
-  private FixedFormatConfigurer(String fieldName) {
+  private FixedFormatFieldConfigurer(String fieldName) {
     super();
     this.fieldName = fieldName;
   }
@@ -217,7 +228,7 @@ public class FixedFormatConfigurer {
    * Apply the changes to the properties of the annotations, saving the original values so they can be set back again.
    * @return the receiver object (this).
    */
-  public FixedFormatConfigurer apply() {
+  public FixedFormatFieldConfigurer apply() {
     if (getter == null) {
       throw new IllegalStateException("No class specified before apply() - try inClass()");
     }
@@ -250,7 +261,7 @@ public class FixedFormatConfigurer {
     return this;
   }
   
-  public FixedFormatConfigurer reset() {
+  public FixedFormatFieldConfigurer reset() {
     annotationConfigurators.forEach(AnnotationConfigurator::reset);
     return this;
   }

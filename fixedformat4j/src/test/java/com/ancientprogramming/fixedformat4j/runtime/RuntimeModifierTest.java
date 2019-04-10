@@ -5,6 +5,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -14,7 +15,7 @@ import com.ancientprogramming.fixedformat4j.annotation.Align;
 import com.ancientprogramming.fixedformat4j.annotation.Field;
 import com.ancientprogramming.fixedformat4j.annotation.FixedFormatPattern;
 import com.ancientprogramming.fixedformat4j.annotation.Record;
-import com.ancientprogramming.fixedformat4j.configuration.FixedFormatConfigurer;
+import com.ancientprogramming.fixedformat4j.configuration.FixedFormatFieldConfigurer;
 import com.ancientprogramming.fixedformat4j.format.FixedFormatManager;
 import com.ancientprogramming.fixedformat4j.format.impl.FixedFormatManagerImpl;
 
@@ -62,7 +63,6 @@ public class RuntimeModifierTest extends TestCase {
   
   @Override
   protected void setUp() throws Exception {
-    // TODO Auto-generated method stub
     super.setUp();
   }
   
@@ -107,20 +107,21 @@ public class RuntimeModifierTest extends TestCase {
   public void testCanOverlapFields() {
     try {
       Field fAnnotation = BasicRecord.class.getMethod("getIntegerData", new Class<?>[] {}).getAnnotation(Field.class);
-      changeAnnotationValue(fAnnotation, "offset", (Integer) 1);
+      Object savedValue = changeAnnotationValue(fAnnotation, "offset", (Integer) 1);
       assertTrue("Did not set field offset to 1", fAnnotation.offset() == 1);
       BasicRecord record = ffm.load(BasicRecord.class, FRECORD);
       assertTrue("Did not read overlapped integer field", record.getIntegerData() == 12345);
       assertTrue("Did not read overlapped string field", record.getStringData().equals("12345678901234567890"));
+      changeAnnotationValue(fAnnotation, "offset", savedValue);
     } catch (Exception e) {
       fail("Caught unexpected exception " + e.getMessage());
     }
   }
   
-  public void testFixedFormatConfiguratorAndReset() {
+  public void testFixedFormatFieldConfigurerAndReset() {
     try {
-      FixedFormatConfigurer ffc = 
-        FixedFormatConfigurer.forField("integerData")
+      FixedFormatFieldConfigurer ffc = 
+        FixedFormatFieldConfigurer.forField("integerData")
           .inClass(BasicRecord.class)
           .offset(25)
           .length(10)
@@ -142,19 +143,97 @@ public class RuntimeModifierTest extends TestCase {
     }
   }
   
-  public void testFixedFormatConfiguratorErrorNoMethod() {
+  public void testFixedFormatFieldConfiguratorWithMap() {
     try {
-      FixedFormatConfigurer.forField("notAField").inClass(BasicRecord.class);
-    } catch (NoSuchMethodException e) {
-     logger.info("Got expected exception"); 
+      Map<String,String> pMap = new HashMap<>();
+      pMap.put("length", "10");
+      pMap.put("offset", "25");
+      pMap.put("align", "LEFT");
+      pMap.put("paddingChar", "#");
+      FixedFormatFieldConfigurer ffc = 
+        FixedFormatFieldConfigurer.forFieldWith("integerData", pMap)
+          .inClass(BasicRecord.class)
+          .apply();
+      Field fAnnotation = BasicRecord.class.getMethod("getIntegerData").getAnnotation(Field.class);
+      assertTrue("Offset isn't 25", fAnnotation.offset() == 25);
+      assertTrue("Length isn't 10", fAnnotation.length() == 10);
+      assertTrue("Alignment isn't LEFT", fAnnotation.align().equals(Align.LEFT));
+      assertTrue("Padding character isn't '#'", fAnnotation.paddingChar() == '#');
+      ffc.reset();
     } catch (Exception e) {
       fail("Caught unexpected exception " + e.getMessage());
     }
   }
   
-  public void testFixedFormatConfiguratorErrorNoClass() {
+  public void testFixedFormatFieldConfiguratorWithMapBadLength() {
     try {
-      FixedFormatConfigurer.forField("stringData")
+      Map<String,String> pMap = new HashMap<>();
+      pMap.put("length", "quite long");
+      FixedFormatFieldConfigurer.forFieldWith("integerData", pMap)
+        .inClass(BasicRecord.class)
+        .apply();
+      fail("Should not have accepted a string for an integer in length");
+    } catch (NumberFormatException e) {
+      logger.info("Caught expected exception");
+    } catch (Exception e) {
+      fail("Caught unexpected exception " + e.getMessage());
+    }
+  }
+  
+  public void testFixedFormatFieldConfiguratorWithMapBadOffset() {
+    try {
+      Map<String,String> pMap = new HashMap<>();
+      pMap.put("offset", "over there");
+      FixedFormatFieldConfigurer.forFieldWith("integerData", pMap)
+        .inClass(BasicRecord.class)
+        .apply();
+      fail("Should not have accepted a string for an integer in length");
+    } catch (NumberFormatException e) {
+      logger.info("Caught expected exception");
+    } catch (Exception e) {
+      fail("Caught unexpected exception " + e.getMessage());
+    }
+  }
+  
+  public void testFixedFormatFieldConfiguratorWithBadAlignment() {
+    try {
+      Map<String,String> pMap = new HashMap<>();
+      pMap.put("align", "top");
+      FixedFormatFieldConfigurer ffc = 
+        FixedFormatFieldConfigurer.forFieldWith("integerData", pMap)
+          .inClass(BasicRecord.class)
+          .apply();
+      Field fAnnotation = BasicRecord.class.getMethod("getIntegerData").getAnnotation(Field.class);
+      assertTrue("Offset isn't 21", fAnnotation.offset() == 21);
+      assertTrue("Length isn't 5", fAnnotation.length() == 5);
+      assertTrue("Alignment isn't RIGHT", fAnnotation.align().equals(Align.RIGHT));
+      ffc.reset();
+    } catch (Exception e) {
+      fail("Caught unexpected exception " + e.getMessage());
+    }
+  }
+
+  public void testFixedFormatFieldConfiguratorWithBadPropertyInMap() {
+    try {
+      Map<String,String> pMap = new HashMap<>();
+      pMap.put("paddington", "bear");
+      FixedFormatFieldConfigurer ffc = 
+        FixedFormatFieldConfigurer.forFieldWith("integerData", pMap)
+          .inClass(BasicRecord.class)
+          .apply();
+      Field fAnnotation = BasicRecord.class.getMethod("getIntegerData").getAnnotation(Field.class);
+      assertTrue("Offset isn't 21", fAnnotation.offset() == 21);
+      assertTrue("Length isn't 5", fAnnotation.length() == 5);
+      assertTrue("Alignment isn't RIGHT", fAnnotation.align().equals(Align.RIGHT));
+      ffc.reset();
+    } catch (Exception e) {
+      fail("Caught unexpected exception " + e.getMessage());
+    }
+  }
+
+  public void testFixedFormatFieldConfiguratorErrorNoClass() {
+    try {
+      FixedFormatFieldConfigurer.forField("stringData")
         .offset(10)
         .length(5)
         .apply();
