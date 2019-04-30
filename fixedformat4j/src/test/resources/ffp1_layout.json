@@ -1,0 +1,52 @@
+{
+  "ffpFileLayout": {
+    "airline": "ib",
+    "filetype": "ffp1",
+    "header": [{
+        "fieldName": "recordType",
+        "offset": 1,
+        "length": 1
+      }, {
+        "fieldName": "sendingAirline",
+        "offset": 2,
+        "length": 3
+      }, {
+        "fieldName": "receivingAirline",
+        "offset": 5,
+        "length": 3
+      }, {
+       "fieldName": "fileType",
+        "offset": 8,
+        "length": 12
+      }, {
+        "fieldName": "batchNumber",
+        "offset": 20,
+        "length": 6
+      }
+    ],
+    "record": [{
+      "fieldName": "recordType",
+      "offset": 1,
+      "length": 1
+    }, {
+        "fieldName": "frequentFlyerProgram",
+        "offset": 2,
+        "length": 3
+     }
+    ],
+    "trailer": [{
+        "fieldName": "recordType",
+        "offset": 1,
+        "length": 1
+      }, {
+        "fieldName": "recordCount",
+        "offset": 2,
+        "length": 6
+      }, {
+        "fieldName": "filler1",
+        "offset": 8,
+        "length": 393
+      }
+      ]
+    }
+}
